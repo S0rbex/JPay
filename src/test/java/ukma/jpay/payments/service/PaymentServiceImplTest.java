@@ -93,10 +93,14 @@ class PaymentServiceImplTest {
     void updateStatusWithValidTransitionSavesAndPublishes() {
         Payment processing = processingPayment();
         when(paymentRepository.findById(processing.id())).thenReturn(Optional.of(processing));
+        when(paymentRepository.updateStatus(
+                processing.id(), TransactionStatus.PROCESSING, TransactionStatus.SUCCEEDED))
+                .thenReturn(true);
 
         service().updateStatus(processing.id(), "stripe", TransactionStatus.SUCCEEDED);
 
-        verify(paymentRepository).save(processing.transitionTo(TransactionStatus.SUCCEEDED));
+        verify(paymentRepository).updateStatus(
+                processing.id(), TransactionStatus.PROCESSING, TransactionStatus.SUCCEEDED);
         verify(eventPublisher).publishEvent(new PaymentStatusChanged(
                 processing.id(), TransactionStatus.PROCESSING, TransactionStatus.SUCCEEDED));
     }

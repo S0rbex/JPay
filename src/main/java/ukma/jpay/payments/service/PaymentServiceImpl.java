@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ukma.jpay.payments.domain.Payment;
 import ukma.jpay.payments.domain.PaymentStatusChanged;
 import ukma.jpay.payments.domain.TransactionStatus;
+import ukma.jpay.payments.error.InvalidStateTransitionException;
 import ukma.jpay.payments.error.PaymentNotFoundException;
 import ukma.jpay.payments.error.ProviderMismatchException;
 import ukma.jpay.payments.error.UnsupportedCurrencyException;
@@ -49,6 +50,7 @@ class PaymentServiceImpl implements PaymentService {
                 merchantReference,
                 provider.providerId(),
                 Instant.now());
+        paymentRepository.save(payment);
 
         provider.submit(payment);
 
@@ -73,8 +75,17 @@ class PaymentServiceImpl implements PaymentService {
         if (!current.providerId().equals(providerId)) {
             throw new ProviderMismatchException(paymentId, current.providerId(), providerId);
         }
-        Payment updated = current.transitionTo(status);
-        paymentRepository.save(updated);
+        if (current.status() == status) {
+            return;
+        }
+        current.transitionTo(status);
+        if (!paymentRepository.updateStatus(paymentId, current.status(), status)) {
+            TransactionStatus actual = get(paymentId).status();
+            if (actual == status) {
+                return;
+            }
+            throw new InvalidStateTransitionException(paymentId, actual, status);
+        }
         eventPublisher.publishEvent(new PaymentStatusChanged(paymentId, current.status(), status));
     }
 }

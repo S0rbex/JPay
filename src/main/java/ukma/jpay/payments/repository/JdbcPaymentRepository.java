@@ -57,4 +57,16 @@ class JdbcPaymentRepository implements PaymentRepository {
                         resultSet.getTimestamp("created_at").toInstant()))
                 .optional();
     }
+
+    @Override
+    public boolean updateStatus(UUID paymentId, TransactionStatus from, TransactionStatus to) {
+        int updated = jdbcClient.sql("""
+                        UPDATE payments SET status = :to WHERE id = :id AND status = :from
+                        """)
+                .param("to", to.name())
+                .param("id", paymentId)
+                .param("from", from.name())
+                .update();
+        return updated == 1;
+    }
 }
