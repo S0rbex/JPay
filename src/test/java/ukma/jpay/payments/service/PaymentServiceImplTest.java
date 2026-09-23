@@ -10,6 +10,7 @@ import ukma.jpay.payments.domain.PaymentStatusChanged;
 import ukma.jpay.payments.domain.TransactionStatus;
 import ukma.jpay.payments.error.InvalidStateTransitionException;
 import ukma.jpay.payments.error.PaymentNotFoundException;
+import ukma.jpay.payments.error.ProviderMismatchException;
 import ukma.jpay.payments.error.UnsupportedCurrencyException;
 import ukma.jpay.payments.provider.PaymentProviderClient;
 import ukma.jpay.payments.repository.PaymentRepository;
@@ -93,7 +94,7 @@ class PaymentServiceImplTest {
         Payment processing = processingPayment();
         when(paymentRepository.findById(processing.id())).thenReturn(Optional.of(processing));
 
-        service().updateStatus(processing.id(), TransactionStatus.SUCCEEDED);
+        service().updateStatus(processing.id(), "stripe", TransactionStatus.SUCCEEDED);
 
         verify(paymentRepository).save(processing.transitionTo(TransactionStatus.SUCCEEDED));
         verify(eventPublisher).publishEvent(new PaymentStatusChanged(
@@ -105,8 +106,21 @@ class PaymentServiceImplTest {
         Payment processing = processingPayment();
         when(paymentRepository.findById(processing.id())).thenReturn(Optional.of(processing));
 
-        assertThatThrownBy(() -> service().updateStatus(processing.id(), TransactionStatus.REFUNDED))
+        assertThatThrownBy(() -> service().updateStatus(processing.id(), "stripe", TransactionStatus.REFUNDED))
                 .isInstanceOf(InvalidStateTransitionException.class);
+
+        verify(paymentRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void updateStatusFromDifferentProviderThrowsAndSavesNothing() {
+        Payment processing = processingPayment();
+        when(paymentRepository.findById(processing.id())).thenReturn(Optional.of(processing));
+
+        assertThatThrownBy(() -> service().updateStatus(
+                processing.id(), "liqpay", TransactionStatus.SUCCEEDED))
+                .isInstanceOf(ProviderMismatchException.class);
 
         verify(paymentRepository, never()).save(any());
         verifyNoInteractions(eventPublisher);

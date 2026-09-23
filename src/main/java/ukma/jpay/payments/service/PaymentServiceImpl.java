@@ -7,6 +7,7 @@ import ukma.jpay.payments.domain.Payment;
 import ukma.jpay.payments.domain.PaymentStatusChanged;
 import ukma.jpay.payments.domain.TransactionStatus;
 import ukma.jpay.payments.error.PaymentNotFoundException;
+import ukma.jpay.payments.error.ProviderMismatchException;
 import ukma.jpay.payments.error.UnsupportedCurrencyException;
 import ukma.jpay.payments.provider.PaymentProviderClient;
 import ukma.jpay.payments.repository.PaymentRepository;
@@ -28,7 +29,7 @@ class PaymentServiceImpl implements PaymentService {
             List<PaymentProviderClient> providerClients,
             ApplicationEventPublisher eventPublisher) {
         this.paymentRepository = paymentRepository;
-        this.providerClients = providerClients;
+        this.providerClients = List.copyOf(providerClients);
         this.eventPublisher = eventPublisher;
     }
 
@@ -67,8 +68,11 @@ class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public void updateStatus(UUID paymentId, TransactionStatus status) {
+    public void updateStatus(UUID paymentId, String providerId, TransactionStatus status) {
         Payment current = get(paymentId);
+        if (!current.providerId().equals(providerId)) {
+            throw new ProviderMismatchException(paymentId, current.providerId(), providerId);
+        }
         Payment updated = current.transitionTo(status);
         paymentRepository.save(updated);
         eventPublisher.publishEvent(new PaymentStatusChanged(paymentId, current.status(), status));
