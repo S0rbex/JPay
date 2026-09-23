@@ -7,9 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ukma.jpay.payments.domain.TransactionStatus;
 import ukma.jpay.payments.service.PaymentService;
-import ukma.jpay.webhooks.domain.ProviderEventType;
 import ukma.jpay.webhooks.web.dto.ProviderWebhookRequest;
 import ukma.jpay.webhooks.web.dto.WebhookAcknowledgement;
 
@@ -28,10 +26,7 @@ public class ProviderWebhookController {
             @PathVariable String providerId,
             @RequestBody @Valid ProviderWebhookRequest request) {
 
-        TransactionStatus status = request.type() == ProviderEventType.PAYMENT_SUCCEEDED
-                ? TransactionStatus.SUCCEEDED
-                : TransactionStatus.FAILED;
-        paymentService.updateStatus(request.paymentId(), status);
+        paymentService.updateStatus(request.paymentId(), request.type().targetStatus());
 
         return ResponseEntity.accepted()
                 .body(new WebhookAcknowledgement(providerId, request.eventId(), request.paymentId()));
