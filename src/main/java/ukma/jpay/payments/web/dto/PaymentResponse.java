@@ -13,6 +13,7 @@ public record PaymentResponse(
         BigDecimal amount,
         String currency,
         String merchantReference,
+        String providerId,
         Instant createdAt) {
 
     public static PaymentResponse from(Payment payment) {
@@ -22,6 +23,7 @@ public record PaymentResponse(
                 payment.amount(),
                 payment.currency(),
                 payment.merchantReference(),
+                payment.providerId(),
                 payment.createdAt());
     }
 }
