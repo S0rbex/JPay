@@ -12,5 +12,5 @@ public interface PaymentService {
 
     Payment get(UUID paymentId);
 
-    void updateStatus(UUID paymentId, TransactionStatus status);
+    void updateStatus(UUID paymentId, String providerId, TransactionStatus status);
 }
