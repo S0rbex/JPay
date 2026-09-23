@@ -7,10 +7,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ukma.jpay.payments.domain.TransactionStatus;
+import ukma.jpay.payments.error.InvalidStateTransitionException;
 import ukma.jpay.payments.service.PaymentService;
 
 import java.util.UUID;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -58,5 +60,25 @@ class ProviderWebhookControllerTest {
                 .andExpect(jsonPath("$.type").value("urn:jpay:problem:validation-failed"));
 
         verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    void invalidStateTransitionReturnsConflictProblem() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        doThrow(new InvalidStateTransitionException(paymentId, TransactionStatus.INITIATED, TransactionStatus.FAILED))
+                .when(paymentService).updateStatus(paymentId, TransactionStatus.FAILED);
+
+        mockMvc.perform(post("/api/v1/providers/{providerId}/webhook-events", "stripe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "eventId": "evt-1",
+                                  "paymentId": "%s",
+                                  "type": "PAYMENT_FAILED"
+                                }
+                                """.formatted(paymentId)))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("urn:jpay:problem:invalid-state-transition"));
     }
 }
