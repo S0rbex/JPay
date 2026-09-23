@@ -56,8 +56,9 @@ class PaymentControllerTest {
                 .andExpect(header().string(
                         "Location", endsWith("/api/v1/payments/" + paymentId)))
                 .andExpect(jsonPath("$.id").value(paymentId.toString()))
-                .andExpect(jsonPath("$.status").value("INITIATED"))
-                .andExpect(jsonPath("$.amount").value(19.99));
+                .andExpect(jsonPath("$.status").value("PROCESSING"))
+                .andExpect(jsonPath("$.amount").value(19.99))
+                .andExpect(jsonPath("$.providerId").value("stripe"));
 
         verify(paymentService).create(new BigDecimal("19.99"), "USD", "order-1");
     }
@@ -139,10 +140,11 @@ class PaymentControllerTest {
     private static Payment payment(UUID paymentId) {
         return new Payment(
                 paymentId,
-                TransactionStatus.INITIATED,
+                TransactionStatus.PROCESSING,
                 new BigDecimal("19.99"),
                 "USD",
                 "order-1",
+                "stripe",
                 Instant.parse("2026-01-01T00:00:00Z"));
     }
 }
