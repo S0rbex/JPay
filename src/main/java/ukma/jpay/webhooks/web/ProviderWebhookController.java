@@ -26,7 +26,7 @@ public class ProviderWebhookController {
             @PathVariable String providerId,
             @RequestBody @Valid ProviderWebhookRequest request) {
 
-        paymentService.updateStatus(request.paymentId(), request.type().targetStatus());
+        paymentService.updateStatus(request.paymentId(), providerId, request.type().targetStatus());
 
         return ResponseEntity.accepted()
                 .body(new WebhookAcknowledgement(providerId, request.eventId(), request.paymentId()));

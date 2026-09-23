@@ -3,7 +3,7 @@
 Це мінімальний REST-зріз бізнес-кейсу платіжної оркестрації з [`JPay.md`](JPay.md).
 У поточній роботі реалізований сервісний шар для UC-1 (створення платежу з вибором провайдера)
 та UC-4 (обробка вебхука провайдера). Retry, failover, circuit breaker, повна модель повернень,
-ledger, API-key authentication, ідемпотентне сховище, реальна база даних та перевірка підпису
+ledger, API-key authentication, ідемпотентне сховище, production-база даних та перевірка підпису
 webhook залишені для наступних завдань.
 
 ## Модулі та контракти (Spring Modulith)
@@ -15,7 +15,7 @@ webhook залишені для наступних завдань.
 | `webhooks` | усе | — (лише контролер, викликає `payments.service`) |
 | `notifications` | усе | — (лише слухає подію `PaymentStatusChanged`) |
 
-Реалізації (`PaymentServiceImpl`, `InMemoryPaymentRepository`, мок-клієнти провайдерів,
+Реалізації (`PaymentServiceImpl`, `JdbcPaymentRepository`, мок-клієнти провайдерів,
 `MerchantNotificationListener`) — package-private класи. Інші модулі бачать і використовують
 лише інтерфейси `PaymentService`, `PaymentProviderClient` тощо — залежність виключно через
 контракти. Межі модулів і відсутність доступу до internal-пакетів перевіряються тестом
@@ -42,10 +42,12 @@ webhook залишені для наступних завдань.
 2. **Переходи станів лише за матрицею нижче.** Будь-яка інша спроба переходу відхиляється
    як `InvalidStateTransitionException` (`409`) на рівні домену (`Payment.transitionTo`),
    до будь-якого запису в сховище.
-3. **Терміновий стан незмінний.** З `FAILED` та `REFUNDED` неможливий жодний подальший перехід.
+3. **Термінальний стан незмінний.** З `FAILED` та `REFUNDED` неможливий жодний подальший перехід.
 4. **Повернення лише з `SUCCEEDED`.** Вебхук `PAYMENT_REFUNDED` дозволений лише після
    `PAYMENT_SUCCEEDED`.
-5. **Кожна зміна статусу публікує подію.** `PaymentServiceImpl` після успішного збереження
+5. **Вебхук приймається лише від обраного провайдера.** `providerId` у URL має збігатися з
+   провайдером платежу, інакше повертається `ProviderMismatchException` (`409`).
+6. **Кожна зміна статусу публікує подію.** `PaymentServiceImpl` після успішного збереження
    публікує `PaymentStatusChanged`, яку асинхронно обробляє `notifications`-модуль.
 
 ### Матриця переходів станів
@@ -72,6 +74,7 @@ INITIATED → PROCESSING → SUCCEEDED → REFUNDED
 | `urn:jpay:problem:unknown-field` | 400 | Невідоме поле в JSON |
 | `urn:jpay:problem:malformed-json` | 400 | Некоректний JSON |
 | `urn:jpay:problem:payment-not-found` | 404 | Платіж не знайдено |
+| `urn:jpay:problem:provider-mismatch` | 409 | Вебхук надійшов не від провайдера платежу |
 | `urn:jpay:problem:invalid-state-transition` | 409 | Недозволений перехід стану |
 | `urn:jpay:problem:unsupported-currency` | 422 | Жоден провайдер не підтримує валюту |
 
@@ -85,8 +88,8 @@ INITIATED → PROCESSING → SUCCEEDED → REFUNDED
 транзакції, застосунок підключає `spring-boot-starter-jdbc` з вбудованою H2 — це дає
 робочий `PlatformTransactionManager`, потрібний лише для того, щоб транзакція навколо
 `PaymentServiceImpl.create`/`updateStatus` (обидва методи `@Transactional`) могла
-комітитись і запускати слухача. Дані платежів залишаються в `InMemoryPaymentRepository`
-(`ConcurrentHashMap`) — H2 тут не зберігає жодних бізнес-даних.
+комітитись і запускати слухача. Платежі зберігаються через `JdbcPaymentRepository`
+у таблиці `payments` в embedded H2, схема якої створюється з `schema.sql`.
 
 ## Тестування
 
