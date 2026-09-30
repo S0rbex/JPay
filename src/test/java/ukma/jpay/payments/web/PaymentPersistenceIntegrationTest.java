@@ -55,7 +55,7 @@ class PaymentPersistenceIntegrationTest {
         var response = mockMvc.perform(post("/api/v1/payments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"amount": 19.99, "currency": "USD", "merchantReference": "http-order"}
+                                {"merchantId": "10000000-0000-0000-0000-000000000001", "amount": 19.99, "currency": "USD", "merchantReference": "http-order"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("PROCESSING"))
@@ -80,5 +80,12 @@ class PaymentPersistenceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCEEDED"))
                 .andExpect(jsonPath("$.merchantReference").value("http-order"));
+
+        mockMvc.perform(get("/api/v1/payments/{id}/attempts", paymentId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].attemptNumber").value(1))
+                .andExpect(jsonPath("$[0].result").value("SUBMITTED"))
+                .andExpect(jsonPath("$[0].providerId").value("stripe"));
     }
 }

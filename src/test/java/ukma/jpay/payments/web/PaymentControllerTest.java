@@ -8,6 +8,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ukma.jpay.payments.domain.Payment;
 import ukma.jpay.payments.domain.TransactionStatus;
+import ukma.jpay.payments.error.MerchantNotFoundException;
+import ukma.jpay.payments.error.PaymentNotDeletableException;
 import ukma.jpay.payments.error.PaymentNotFoundException;
 import ukma.jpay.payments.service.PaymentService;
 
@@ -18,10 +20,13 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -34,6 +39,8 @@ class PaymentControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    private static final UUID MERCHANT_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
+
     @MockitoBean
     private PaymentService paymentService;
 
@@ -41,17 +48,18 @@ class PaymentControllerTest {
     void createReturns201AndDelegatesToService() throws Exception {
         UUID paymentId = UUID.randomUUID();
         Payment payment = payment(paymentId);
-        when(paymentService.create(any(), eq("USD"), eq("order-1"))).thenReturn(payment);
+        when(paymentService.create(eq(MERCHANT_ID), any(), eq("USD"), eq("order-1"))).thenReturn(payment);
 
         mockMvc.perform(post("/api/v1/payments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "merchantId": "%s",
                                   "amount": 19.99,
                                   "currency": "USD",
                                   "merchantReference": "order-1"
                                 }
-                                """))
+                                """.formatted(MERCHANT_ID)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string(
                         "Location", endsWith("/api/v1/payments/" + paymentId)))
@@ -60,7 +68,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.amount").value(19.99))
                 .andExpect(jsonPath("$.providerId").value("stripe"));
 
-        verify(paymentService).create(new BigDecimal("19.99"), "USD", "order-1");
+        verify(paymentService).create(MERCHANT_ID, new BigDecimal("19.99"), "USD", "order-1");
     }
 
     @Test
@@ -135,6 +143,101 @@ class PaymentControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.type").value("urn:jpay:problem:payment-not-found"))
                 .andExpect(jsonPath("$.paymentId").value(paymentId.toString()));
+    }
+
+    @Test
+    void createWithoutMerchantIdReturnsValidationProblem() throws Exception {
+        mockMvc.perform(post("/api/v1/payments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"amount": 19.99, "currency": "USD"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("urn:jpay:problem:validation-failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("merchantId"));
+
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    void createForUnknownMerchantReturns404() throws Exception {
+        when(paymentService.create(eq(MERCHANT_ID), any(), eq("USD"), any()))
+                .thenThrow(new MerchantNotFoundException(MERCHANT_ID));
+
+        mockMvc.perform(post("/api/v1/payments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"merchantId": "%s", "amount": 19.99, "currency": "USD"}
+                                """.formatted(MERCHANT_ID)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("urn:jpay:problem:merchant-not-found"))
+                .andExpect(jsonPath("$.merchantId").value(MERCHANT_ID.toString()));
+    }
+
+    @Test
+    void patchUpdatesMerchantReference() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        when(paymentService.updateReference(paymentId, "order-2")).thenReturn(payment(paymentId));
+
+        mockMvc.perform(patch("/api/v1/payments/{paymentId}", paymentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"merchantReference": "order-2"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(paymentId.toString()));
+
+        verify(paymentService).updateReference(paymentId, "order-2");
+    }
+
+    @Test
+    void patchWithTooLongReferenceReturnsValidationProblem() throws Exception {
+        mockMvc.perform(patch("/api/v1/payments/{paymentId}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"merchantReference": "%s"}
+                                """.formatted("x".repeat(65))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("urn:jpay:problem:validation-failed"));
+
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    void patchOnMissingPaymentReturns404() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        when(paymentService.updateReference(eq(paymentId), any()))
+                .thenThrow(new PaymentNotFoundException(paymentId));
+
+        mockMvc.perform(patch("/api/v1/payments/{paymentId}", paymentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"merchantReference\": \"order-2\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("urn:jpay:problem:payment-not-found"));
+    }
+
+    @Test
+    void deleteReturns204() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/payments/{paymentId}", paymentId))
+                .andExpect(status().isNoContent());
+
+        verify(paymentService).delete(paymentId);
+    }
+
+    @Test
+    void deleteOfNonFailedPaymentReturns409() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        doThrow(new PaymentNotDeletableException(paymentId, TransactionStatus.PROCESSING))
+                .when(paymentService).delete(paymentId);
+
+        mockMvc.perform(delete("/api/v1/payments/{paymentId}", paymentId))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("urn:jpay:problem:payment-not-deletable"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.currentStatus").value("PROCESSING"));
     }
 
     private static Payment payment(UUID paymentId) {

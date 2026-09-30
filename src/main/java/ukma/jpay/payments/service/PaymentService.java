@@ -10,11 +10,15 @@ import java.util.UUID;
 
 public interface PaymentService {
 
-    Payment create(BigDecimal amount, String currency, String merchantReference);
+    Payment create(UUID merchantId, BigDecimal amount, String currency, String merchantReference);
 
     Payment get(UUID paymentId);
 
     List<PaymentDetails> list();
+
+    Payment updateReference(UUID paymentId, String merchantReference);
+
+    void delete(UUID paymentId);
 
     void updateStatus(UUID paymentId, String providerId, TransactionStatus status);
 }

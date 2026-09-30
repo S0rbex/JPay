@@ -8,8 +8,12 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record CreatePaymentRequest(
+        @NotNull
+        UUID merchantId,
+
         @NotNull
         @DecimalMin(value = "0.01", message = "amount must be at least 0.01")
         @Digits(integer = 12, fraction = 2)

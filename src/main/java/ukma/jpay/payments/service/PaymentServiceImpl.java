@@ -8,10 +8,15 @@ import ukma.jpay.payments.domain.PaymentDetails;
 import ukma.jpay.payments.domain.PaymentStatusChanged;
 import ukma.jpay.payments.domain.TransactionStatus;
 import ukma.jpay.payments.error.InvalidStateTransitionException;
+import ukma.jpay.payments.error.MerchantNotFoundException;
+import ukma.jpay.payments.error.PaymentNotDeletableException;
 import ukma.jpay.payments.error.PaymentNotFoundException;
 import ukma.jpay.payments.error.ProviderMismatchException;
 import ukma.jpay.payments.error.UnsupportedCurrencyException;
+import ukma.jpay.payments.persistence.PaymentProviderEntity;
 import ukma.jpay.payments.provider.PaymentProviderClient;
+import ukma.jpay.payments.repository.MerchantRepository;
+import ukma.jpay.payments.repository.PaymentProviderRepository;
 import ukma.jpay.payments.repository.PaymentRepository;
 
 import java.math.BigDecimal;
@@ -23,22 +28,35 @@ import java.util.UUID;
 class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final MerchantRepository merchantRepository;
+    private final PaymentProviderRepository providerRepository;
     private final List<PaymentProviderClient> providerClients;
     private final ApplicationEventPublisher eventPublisher;
 
     PaymentServiceImpl(
             PaymentRepository paymentRepository,
+            MerchantRepository merchantRepository,
+            PaymentProviderRepository providerRepository,
             List<PaymentProviderClient> providerClients,
             ApplicationEventPublisher eventPublisher) {
         this.paymentRepository = paymentRepository;
+        this.merchantRepository = merchantRepository;
+        this.providerRepository = providerRepository;
         this.providerClients = List.copyOf(providerClients);
         this.eventPublisher = eventPublisher;
     }
 
     @Override
     @Transactional
-    public Payment create(BigDecimal amount, String currency, String merchantReference) {
-        PaymentProviderClient provider = providerClients.stream()
+    public Payment create(UUID merchantId, BigDecimal amount, String currency, String merchantReference) {
+        if (!merchantRepository.existsById(merchantId)) {
+            throw new MerchantNotFoundException(merchantId);
+        }
+        List<String> enabledProviderIds = providerRepository.findEnabledForMerchant(merchantId).stream()
+                .map(PaymentProviderEntity::getId)
+                .toList();
+        PaymentProviderClient provider = enabledProviderIds.stream()
+                .flatMap(id -> providerClients.stream().filter(client -> client.providerId().equals(id)))
                 .filter(client -> client.supports(currency))
                 .findFirst()
                 .orElseThrow(() -> new UnsupportedCurrencyException(currency));
@@ -51,7 +69,7 @@ class PaymentServiceImpl implements PaymentService {
                 merchantReference,
                 provider.providerId(),
                 Instant.now());
-        paymentRepository.save(payment);
+        paymentRepository.create(payment, merchantId);
 
         provider.submit(payment);
 
@@ -73,6 +91,25 @@ class PaymentServiceImpl implements PaymentService {
     @Transactional(readOnly = true)
     public List<PaymentDetails> list() {
         return paymentRepository.findAllWithDetails();
+    }
+
+    @Override
+    @Transactional
+    public Payment updateReference(UUID paymentId, String merchantReference) {
+        Payment current = get(paymentId);
+        return paymentRepository.save(new Payment(
+                current.id(), current.status(), current.amount(), current.currency(),
+                merchantReference, current.providerId(), current.createdAt()));
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID paymentId) {
+        Payment current = get(paymentId);
+        if (current.status() != TransactionStatus.FAILED) {
+            throw new PaymentNotDeletableException(paymentId, current.status());
+        }
+        paymentRepository.deleteById(paymentId);
     }
 
     @Override
