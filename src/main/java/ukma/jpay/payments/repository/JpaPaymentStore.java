@@ -8,6 +8,8 @@ import ukma.jpay.payments.domain.PaymentDetails.AttemptSummary;
 import ukma.jpay.payments.domain.PaymentDetails.MerchantSummary;
 import ukma.jpay.payments.domain.PaymentDetails.ProviderSummary;
 import ukma.jpay.payments.domain.TransactionStatus;
+import ukma.jpay.payments.persistence.AttemptResult;
+import ukma.jpay.payments.persistence.PaymentAttemptEntity;
 import ukma.jpay.payments.persistence.PaymentEntity;
 
 import java.util.List;
@@ -20,10 +22,30 @@ class JpaPaymentStore implements PaymentRepository {
 
     private final JpaPaymentRepository payments;
     private final PaymentProviderRepository providers;
+    private final MerchantRepository merchants;
 
-    JpaPaymentStore(JpaPaymentRepository payments, PaymentProviderRepository providers) {
+    JpaPaymentStore(JpaPaymentRepository payments, PaymentProviderRepository providers,
+                    MerchantRepository merchants) {
         this.payments = payments;
         this.providers = providers;
+        this.merchants = merchants;
+    }
+
+    @Override
+    @Transactional
+    public Payment create(Payment payment, UUID merchantId) {
+        var provider = providers.getReferenceById(payment.providerId());
+        var entity = new PaymentEntity(payment, provider);
+        entity.setMerchant(merchants.getReferenceById(merchantId));
+        entity.addAttempt(new PaymentAttemptEntity(
+                provider, 1, AttemptResult.SUBMITTED, payment.createdAt()));
+        return payments.save(entity).toPayment();
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(UUID paymentId) {
+        payments.deleteById(paymentId);
     }
 
     @Override

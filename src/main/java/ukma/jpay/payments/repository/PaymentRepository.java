@@ -10,7 +10,11 @@ import java.util.UUID;
 
 public interface PaymentRepository {
 
+    Payment create(Payment payment, UUID merchantId);
+
     Payment save(Payment payment);
+
+    void deleteById(UUID paymentId);
 
     Optional<Payment> findById(UUID paymentId);
 

@@ -15,6 +15,10 @@ public interface MerchantRepository extends JpaRepository<MerchantEntity, UUID> 
 
     boolean existsByContactEmailIgnoreCase(String contactEmail);
 
+    boolean existsByContactEmailIgnoreCaseAndIdNot(String contactEmail, UUID id);
+
+    boolean existsByProvidersId(String providerId);
+
     @Query("""
             select distinct m from MerchantEntity m
             left join fetch m.providers

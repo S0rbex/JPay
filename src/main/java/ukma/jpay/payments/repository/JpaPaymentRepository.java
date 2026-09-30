@@ -16,6 +16,10 @@ public interface JpaPaymentRepository extends JpaRepository<PaymentEntity, UUID>
     List<PaymentEntity> findByStatusAndCurrencyOrderByCreatedAtAscIdAsc(
             TransactionStatus status, String currency);
 
+    boolean existsByMerchantId(UUID merchantId);
+
+    boolean existsByProviderId(String providerId);
+
     @Query("""
             select distinct p from PaymentEntity p
             left join fetch p.merchant
