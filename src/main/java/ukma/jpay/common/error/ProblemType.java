@@ -12,7 +12,14 @@ public enum ProblemType {
     PAYMENT_NOT_FOUND("payment-not-found", "Payment not found", HttpStatus.NOT_FOUND),
     PROVIDER_MISMATCH("provider-mismatch", "Payment provider mismatch", HttpStatus.CONFLICT),
     INVALID_STATE_TRANSITION("invalid-state-transition", "Invalid payment state transition", HttpStatus.CONFLICT),
-    UNSUPPORTED_CURRENCY("unsupported-currency", "Unsupported currency", HttpStatus.UNPROCESSABLE_CONTENT);
+    UNSUPPORTED_CURRENCY("unsupported-currency", "Unsupported currency", HttpStatus.UNPROCESSABLE_CONTENT),
+    MERCHANT_NOT_FOUND("merchant-not-found", "Merchant not found", HttpStatus.NOT_FOUND),
+    PROVIDER_NOT_FOUND("provider-not-found", "Provider not found", HttpStatus.NOT_FOUND),
+    ATTEMPT_NOT_FOUND("attempt-not-found", "Payment attempt not found", HttpStatus.NOT_FOUND),
+    DUPLICATE_MERCHANT_EMAIL("duplicate-merchant-email", "Merchant email already in use", HttpStatus.CONFLICT),
+    DUPLICATE_PROVIDER("duplicate-provider", "Provider already exists", HttpStatus.CONFLICT),
+    RESOURCE_IN_USE("resource-in-use", "Resource is still in use", HttpStatus.CONFLICT),
+    PAYMENT_NOT_DELETABLE("payment-not-deletable", "Payment cannot be deleted", HttpStatus.CONFLICT);
 
     private static final String BASE_URI = "urn:jpay:problem:";
 
