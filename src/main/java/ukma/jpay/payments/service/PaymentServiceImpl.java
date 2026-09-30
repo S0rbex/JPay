@@ -4,6 +4,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ukma.jpay.payments.domain.Payment;
+import ukma.jpay.payments.domain.PaymentDetails;
 import ukma.jpay.payments.domain.PaymentStatusChanged;
 import ukma.jpay.payments.domain.TransactionStatus;
 import ukma.jpay.payments.error.InvalidStateTransitionException;
@@ -66,6 +67,12 @@ class PaymentServiceImpl implements PaymentService {
     public Payment get(UUID paymentId) {
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException(paymentId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PaymentDetails> list() {
+        return paymentRepository.findAllWithDetails();
     }
 
     @Override
