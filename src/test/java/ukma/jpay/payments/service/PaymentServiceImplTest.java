@@ -130,6 +130,43 @@ class PaymentServiceImplTest {
         verifyNoInteractions(eventPublisher);
     }
 
+    @Test
+    void repeatedWebhookDoesNotWriteOrPublishAnotherEvent() {
+        var succeeded = processingPayment().transitionTo(TransactionStatus.SUCCEEDED);
+        when(paymentRepository.findById(succeeded.id())).thenReturn(Optional.of(succeeded));
+
+        service().updateStatus(succeeded.id(), "stripe", TransactionStatus.SUCCEEDED);
+
+        verify(paymentRepository, never()).updateStatus(any(), any(), any());
+        verify(paymentRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void concurrentDuplicateWebhookDoesNotPublishAnotherEvent() {
+        var processing = processingPayment();
+        var succeeded = processing.transitionTo(TransactionStatus.SUCCEEDED);
+        when(paymentRepository.findById(processing.id()))
+                .thenReturn(Optional.of(processing), Optional.of(succeeded));
+
+        service().updateStatus(processing.id(), "stripe", TransactionStatus.SUCCEEDED);
+
+        verify(paymentRepository).updateStatus(processing.id(), TransactionStatus.PROCESSING, TransactionStatus.SUCCEEDED);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void concurrentConflictingWebhookIsRejected() {
+        var processing = processingPayment();
+        var failed = processing.transitionTo(TransactionStatus.FAILED);
+        when(paymentRepository.findById(processing.id()))
+                .thenReturn(Optional.of(processing), Optional.of(failed));
+
+        assertThatThrownBy(() -> service().updateStatus(processing.id(), "stripe", TransactionStatus.SUCCEEDED))
+                .isInstanceOf(InvalidStateTransitionException.class);
+        verifyNoInteractions(eventPublisher);
+    }
+
     private static Payment processingPayment() {
         return new Payment(
                 UUID.randomUUID(),
