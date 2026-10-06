@@ -1,30 +1,31 @@
 package ukma.jpay.payments.web.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import ukma.jpay.common.validation.ConsistentMoneyScale;
-import ukma.jpay.common.validation.Monetary;
-import ukma.jpay.common.validation.SupportedCurrency;
 
 import java.math.BigDecimal;
 
-@JsonIgnoreProperties(ignoreUnknown = false)
-@ConsistentMoneyScale
+@Schema(description = "Запит створення платежу", example = """
+        {"amount":19.99,"currency":"USD","merchantReference":"order-1"}
+        """)
 public record CreatePaymentRequest(
+        @Schema(description = "Сума платежу", example = "19.99")
         @NotNull
         @DecimalMin(value = "0.01", message = "amount must be at least 0.01")
-        @Digits(integer = 12, fraction = 3)
+        @Digits(integer = 12, fraction = 2)
         BigDecimal amount,
 
-        @NotBlank @SupportedCurrency String currency,
+        @Schema(description = "Трилітерний код валюти", example = "USD")
+        @NotBlank
+        @Pattern(regexp = "^[A-Z]{3}$", message = "currency must contain three uppercase letters")
+        String currency,
 
-        @Size(max = 64) @Pattern(regexp = "^[A-Za-z0-9._:-]*$") String merchantReference,
-        @Size(max = 255) String description,
-        @Valid CustomerDetails customer) implements Monetary {
+        @Schema(description = "Ідентифікатор замовлення продавця", example = "order-1")
+        @Size(max = 64)
+        String merchantReference) {
 }
