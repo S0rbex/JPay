@@ -27,3 +27,5 @@ build/
 !**/src/test/**/build/
 
 .vscode/
+
+logs/
