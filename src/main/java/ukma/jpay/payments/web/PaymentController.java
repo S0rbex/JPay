@@ -12,9 +12,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import ukma.jpay.payments.domain.Payment;
 import ukma.jpay.payments.service.PaymentService;
 import ukma.jpay.payments.web.dto.CreatePaymentRequest;
+import ukma.jpay.payments.web.dto.PaymentDetailsResponse;
 import ukma.jpay.payments.web.dto.PaymentResponse;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -43,5 +45,10 @@ public class PaymentController {
     @GetMapping("/{paymentId}")
     public PaymentResponse get(@PathVariable UUID paymentId) {
         return PaymentResponse.from(paymentService.get(paymentId));
+    }
+
+    @GetMapping
+    public List<PaymentDetailsResponse> list() {
+        return paymentService.list().stream().map(PaymentDetailsResponse::from).toList();
     }
 }
