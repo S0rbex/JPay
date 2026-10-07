@@ -1,0 +1,215 @@
+{
+  "info": {
+    "_postman_id": "6f1d1a52-6c1b-4a54-9d0e-3b1c2a7f0002",
+    "name": "JPay Payment Flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create merchant",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/merchants",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "merchants"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Shop\",\n  \"contactEmail\": \"shop-{{$timestamp}}-{{$randomInt}}@example.com\",\n  \"defaultCurrency\": \"USD\",\n  \"providerIds\": [\n    \"{{providerId}}\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('merchant created: 201', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('merchant has id', () => pm.expect(body.id).to.be.a('string').and.not.empty);",
+              "pm.environment.set('merchantId', body.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Create payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"amount\": 19.99,\n  \"currency\": \"USD\",\n  \"merchantReference\": \"postman-order-{{$timestamp}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('payment created: 201', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('payment has id', () => pm.expect(body.id).to.be.a('string').and.not.empty);",
+              "pm.test('provider is expected provider', () => pm.expect(body.providerId).to.eql(pm.environment.get('providerId')));",
+              "pm.test('Location header points to payment', () => pm.expect(pm.response.headers.get('Location')).to.include('/api/v1/payments/' + body.id));",
+              "pm.environment.set('paymentId', body.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Check PROCESSING",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "{{paymentId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('id matches saved paymentId', () => pm.expect(body.id).to.eql(pm.environment.get('paymentId')));",
+              "pm.test('status is PROCESSING (INITIATED -> PROCESSING happens inside create)', () => pm.expect(body.status).to.eql('PROCESSING'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Webhook PAYMENT_SUCCEEDED",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/providers/{{providerId}}/webhook-events",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "providers",
+            "{{providerId}}",
+            "webhook-events"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"eventId\": \"evt-{{$timestamp}}-{{$randomInt}}\",\n  \"paymentId\": \"{{paymentId}}\",\n  \"type\": \"PAYMENT_SUCCEEDED\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('webhook accepted: 202', () => pm.response.to.have.status(202));",
+              "const body = pm.response.json();",
+              "pm.test('acknowledgement references paymentId', () => pm.expect(body.paymentId).to.eql(pm.environment.get('paymentId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Check SUCCEEDED",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "{{paymentId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('status is SUCCEEDED', () => pm.expect(body.status).to.eql('SUCCEEDED'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
