@@ -1,5 +1,7 @@
 package ukma.jpay.common.error;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -20,8 +22,11 @@ import java.util.Objects;
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ProblemDetail> handleBusiness(BusinessException exception) {
+        log.warn("Request rejected: {} ({})", exception.getMessage(), exception.type().title());
         ProblemDetail problem = problemDetail(exception.type(), exception.getMessage());
         exception.properties().forEach(problem::setProperty);
         return ResponseEntity.status(exception.type().status()).body(problem);
@@ -55,6 +60,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             WebRequest request) {
 
         Throwable cause = exception.getMostSpecificCause();
+        log.warn("Unreadable request body: {}", cause.getMessage(), exception);
         ProblemDetail problem;
         if (cause instanceof UnrecognizedPropertyException unrecognized) {
             problem = problemDetail(
