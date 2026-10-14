@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.jpa.properties.hibernate.generate_statistics=true",
         "logging.level.org.hibernate.stat=OFF"
 })
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("demo")
 class PaymentPersistenceIntegrationTest {
 
