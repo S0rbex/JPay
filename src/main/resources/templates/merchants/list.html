@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head('Merchants')}"></head>
 <body>
 <header th:replace="~{fragments/layout :: header}"></header>
 <main class="container">
     <div class="page-title">
         <h1>Merchants</h1>
-        <a class="btn" th:href="@{/merchants/new}">New merchant</a>
+        <a class="btn" th:href="@{/merchants/new}" sec:authorize="hasRole('ADMIN')">New merchant</a>
     </div>
 
     <p class="alert alert-success" th:if="${message}" th:text="${message}"></p>
