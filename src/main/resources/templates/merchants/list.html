@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Merchants')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <div class="page-title">
+        <h1>Merchants</h1>
+        <a class="btn" th:href="@{/merchants/new}">New merchant</a>
+    </div>
+
+    <p class="alert alert-success" th:if="${message}" th:text="${message}"></p>
+
+    <table class="table" th:unless="${#lists.isEmpty(merchants)}">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Contact email</th>
+            <th>Currency</th>
+            <th>Providers</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="merchant : ${merchants}">
+            <td th:text="${merchant.name}"></td>
+            <td th:text="${merchant.contactEmail}"></td>
+            <td th:text="${merchant.defaultCurrency}"></td>
+            <td th:text="${#strings.listJoin(merchant.providerIds, ', ')}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(merchants)}">No merchants yet.</p>
+</main>
+</body>
+</html>

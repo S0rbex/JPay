@@ -1,0 +1,185 @@
+:root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --text: #1f2933;
+    --muted: #6b7280;
+    --border: #d9dde3;
+    --primary: #2f5bea;
+    --primary-dark: #2448c0;
+    --danger: #c62828;
+    --success-bg: #e6f4ea;
+    --success-text: #1e6b34;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.brand {
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text);
+}
+
+.nav {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+}
+
+.user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+}
+
+.user form {
+    margin: 0;
+}
+
+.container {
+    max-width: 960px;
+    margin: 32px auto;
+    padding: 0 16px;
+}
+
+.page-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border: 1px solid var(--primary);
+    border-radius: 6px;
+    background: var(--primary);
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--primary);
+}
+
+.btn-secondary:hover {
+    background: var(--bg);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+
+.table th,
+.table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.table th {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 480px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form input[type=text],
+.form input[type=email],
+.form input[type=password] {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.form input.invalid {
+    border-color: var(--danger);
+}
+
+.form fieldset {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.form .checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.error {
+    color: var(--danger);
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.alert {
+    padding: 10px 14px;
+    border-radius: 6px;
+}
+
+.alert-success {
+    background: var(--success-bg);
+    color: var(--success-text);
+}
+
+.alert-error {
+    background: #fdecea;
+    color: var(--danger);
+}
+
+.empty {
+    color: var(--muted);
+}

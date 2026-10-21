@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' · JPay'">JPay</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header th:fragment="header" class="header">
+    <a class="brand" th:href="@{/}">JPay</a>
+    <nav class="nav">
+        <a th:href="@{/merchants}">Merchants</a>
+    </nav>
+    <div class="user" sec:authorize="isAuthenticated()">
+        <span sec:authentication="name">user</span>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-secondary">Log out</button>
+        </form>
+    </div>
+</header>
+</body>
+</html>

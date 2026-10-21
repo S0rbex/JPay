@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('New merchant')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <h1>New merchant</h1>
+
+    <form class="form" th:action="@{/merchants}" th:object="${merchantForm}" method="post" novalidate>
+        <label>
+            Name
+            <input type="text" th:field="*{name}" th:errorclass="invalid">
+            <span class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+        </label>
+
+        <label>
+            Contact email
+            <input type="email" th:field="*{contactEmail}" th:errorclass="invalid">
+            <span class="error" th:if="${#fields.hasErrors('contactEmail')}" th:errors="*{contactEmail}"></span>
+        </label>
+
+        <label>
+            Default currency
+            <input type="text" maxlength="3" th:field="*{defaultCurrency}" th:errorclass="invalid">
+            <span class="error" th:if="${#fields.hasErrors('defaultCurrency')}" th:errors="*{defaultCurrency}"></span>
+        </label>
+
+        <fieldset>
+            <legend>Providers</legend>
+            <label class="checkbox" th:each="provider : ${providers}">
+                <input type="checkbox" th:field="*{providerIds}" th:value="${provider.id}">
+                <span th:text="${provider.name}"></span>
+            </label>
+            <span class="error" th:if="${#fields.hasErrors('providerIds')}" th:errors="*{providerIds}"></span>
+        </fieldset>
+
+        <div class="actions">
+            <button type="submit" class="btn">Create</button>
+            <a class="btn btn-secondary" th:href="@{/merchants}">Cancel</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>
