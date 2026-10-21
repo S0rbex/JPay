@@ -59,6 +59,20 @@ a {
     margin: 0;
 }
 
+.badge {
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.badge-admin {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
 .container {
     max-width: 960px;
     margin: 32px auto;

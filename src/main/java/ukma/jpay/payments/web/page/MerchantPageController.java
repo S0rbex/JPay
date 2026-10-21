@@ -1,6 +1,7 @@
 package ukma.jpay.payments.web.page;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -41,12 +42,14 @@ public class MerchantPageController {
     }
 
     @GetMapping("/new")
+    @PreAuthorize("hasRole('ADMIN')")
     public String createForm(Model model) {
         model.addAttribute("merchantForm", new MerchantForm());
         return "merchants/form";
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public String create(@Valid @ModelAttribute("merchantForm") MerchantForm form,
                          BindingResult bindingResult,
                          RedirectAttributes redirectAttributes) {

@@ -11,9 +11,12 @@
     <a class="brand" th:href="@{/}">JPay</a>
     <nav class="nav">
         <a th:href="@{/merchants}">Merchants</a>
+        <a th:href="@{/merchants/new}" sec:authorize="hasRole('ADMIN')">New merchant</a>
     </nav>
     <div class="user" sec:authorize="isAuthenticated()">
         <span sec:authentication="name">user</span>
+        <span class="badge badge-admin" sec:authorize="hasRole('ADMIN')">admin</span>
+        <span class="badge" sec:authorize="!hasRole('ADMIN')">user</span>
         <form th:action="@{/logout}" method="post">
             <button type="submit" class="btn btn-secondary">Log out</button>
         </form>
