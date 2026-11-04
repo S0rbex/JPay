@@ -19,7 +19,10 @@ public enum ProblemType {
     DUPLICATE_MERCHANT_EMAIL("duplicate-merchant-email", "Merchant email already in use", HttpStatus.CONFLICT),
     DUPLICATE_PROVIDER("duplicate-provider", "Provider already exists", HttpStatus.CONFLICT),
     RESOURCE_IN_USE("resource-in-use", "Resource is still in use", HttpStatus.CONFLICT),
-    PAYMENT_NOT_DELETABLE("payment-not-deletable", "Payment cannot be deleted", HttpStatus.CONFLICT);
+    PAYMENT_NOT_DELETABLE("payment-not-deletable", "Payment cannot be deleted", HttpStatus.CONFLICT),
+    PROVIDER_UNAVAILABLE("provider-unavailable", "Payment provider unavailable", HttpStatus.BAD_GATEWAY),
+    PROVIDER_TIMEOUT("provider-timeout", "Payment provider timed out", HttpStatus.GATEWAY_TIMEOUT),
+    PROVIDER_REJECTED("provider-rejected", "Payment provider rejected the payment", HttpStatus.UNPROCESSABLE_CONTENT);
 
     private static final String BASE_URI = "urn:jpay:problem:";
 
