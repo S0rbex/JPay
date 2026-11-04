@@ -2,6 +2,7 @@ package ukma.jpay.security;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -13,10 +14,17 @@ public class SecurityDataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final String userPassword;
+    private final String adminPassword;
 
-    public SecurityDataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public SecurityDataInitializer(UserRepository userRepository,
+                                   PasswordEncoder passwordEncoder,
+                                   @Value("${jpay.security.user-password}") String userPassword,
+                                   @Value("${jpay.security.admin-password}") String adminPassword) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userPassword = userPassword;
+        this.adminPassword = adminPassword;
     }
 
     @Override
@@ -26,11 +34,11 @@ public class SecurityDataInitializer implements CommandLineRunner {
         log.info("Example generated password hash: raw='{}', hash='{}'", sampleRawPassword, sampleEncodedHash);
 
         if (!userRepository.existsByUsername("user")) {
-            userRepository.save(new UserEntity("user", passwordEncoder.encode("user123"), Role.ROLE_USER));
+            userRepository.save(new UserEntity("user", passwordEncoder.encode(userPassword), Role.ROLE_USER));
         }
 
         if (!userRepository.existsByUsername("admin")) {
-            userRepository.save(new UserEntity("admin", passwordEncoder.encode("admin123"), Role.ROLE_ADMIN));
+            userRepository.save(new UserEntity("admin", passwordEncoder.encode(adminPassword), Role.ROLE_ADMIN));
         }
     }
 }

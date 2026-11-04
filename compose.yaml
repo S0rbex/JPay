@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${JPAY_DB_NAME:-jpay}
+      POSTGRES_USER: ${JPAY_DB_USER:-jpay}
+      POSTGRES_PASSWORD: ${JPAY_DB_PASSWORD:?set JPAY_DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${JPAY_PORT:-8080}:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${JPAY_DB_NAME:-jpay}
+      SPRING_DATASOURCE_USERNAME: ${JPAY_DB_USER:-jpay}
+      SPRING_DATASOURCE_PASSWORD: ${JPAY_DB_PASSWORD:?set JPAY_DB_PASSWORD in .env}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "false"
+      SPRING_SQL_INIT_MODE: always
+      SERVER_FORWARD_HEADERS_STRATEGY: ${JPAY_FORWARD_HEADERS:-none}
+      JPAY_LOGGING_DIR: /app/logs
+      JPAY_JWT_SECRET: ${JPAY_JWT_SECRET:?set JPAY_JWT_SECRET in .env}
+      JPAY_SECURITY_USER_PASSWORD: ${JPAY_USER_PASSWORD:?set JPAY_USER_PASSWORD in .env}
+      JPAY_SECURITY_ADMIN_PASSWORD: ${JPAY_ADMIN_PASSWORD:?set JPAY_ADMIN_PASSWORD in .env}
+    volumes:
+      - app-logs:/app/logs
+    tmpfs:
+      - /tmp
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 40s
+
+volumes:
+  db-data:
+  app-logs:

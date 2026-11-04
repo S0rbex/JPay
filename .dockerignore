@@ -1,0 +1,10 @@
+.git
+.idea
+.mvn
+.env
+target
+logs
+docs
+*.md
+collection.json
+env.json
